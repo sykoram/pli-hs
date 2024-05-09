@@ -34,7 +34,7 @@ var = do
   tail <- many (choice [alphaNum, char '_'])
   return (c1:tail)  
 
--- | Parses a compound term, which includes a functor name and a list of comma-separated arguments (which are terms). Example: `list_length2(s(s(nil)), Length)`
+-- | Parses a compound term, which includes a functor name and a list of comma-separated arguments (which are terms). Example: `list_length2( .(1,.(2,nil)) , Length)`
 compoundTerm :: Parser Term
 compoundTerm = do
   functor <- atom

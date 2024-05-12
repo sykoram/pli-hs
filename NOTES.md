@@ -1,0 +1,4 @@
+- zabudované:
+  - unifikace `=` - najít algoritmus (zápisky z logiky)
+  - negation as failure `\+` - prostě zkusit splnit cíl a negovat, jestli to bylo úspěšné
+  - řezy jsou možná moc složité

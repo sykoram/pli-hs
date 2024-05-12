@@ -1,6 +1,5 @@
 module Main where
 
-import Text.Parsec
 import Parsing
 
 main :: IO ()

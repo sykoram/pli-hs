@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -Wno-unused-do-bind #-}
 
-module Parsing where
+module Parsing (parseProgram, parseQuery) where
 
 import Text.Parsec
 import Text.Parsec.String
@@ -111,7 +111,14 @@ type Query = Goal
 program :: Parser Program
 program = many (try (spaces >> clause)) <* spaces <* eof
 
+-- | Parses a program, which is a collection of clauses.
+parseProgram :: String -> Either ParseError Program
+parseProgram = parse program ""
+
 -- | Parses a query, which is a goal ending with `.`.
 query :: Parser Query
 query = spaces >> goal <* spaces <* char '.' <* eof
 
+-- | Parses a query, which is a goal ending with `.`.
+parseQuery :: String -> Either ParseError Query
+parseQuery = parse query ""

@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-unused-do-bind #-}
+
 module Parsing where
 
 import Text.Parsec
@@ -22,8 +24,8 @@ quotedStr = do
 basicAtom :: Parser [Char]
 basicAtom = do
   c1 <- lower
-  tail <- many (choice [alphaNum, char '_'])
-  return (c1:tail)
+  chars <- many (choice [alphaNum, char '_'])
+  return (c1:chars)
 
 -- | Parses a special atom, eg. `=`.
 specialAtom :: Parser [Char]
@@ -38,8 +40,8 @@ atom = try basicAtom <|> try specialAtom <|> quotedStr
 var :: Parser [Char]
 var = do
   c1 <- upper <|> char '_'
-  tail <- many (choice [alphaNum, char '_'])
-  return (c1:tail)
+  chars <- many (choice [alphaNum, char '_'])
+  return (c1:chars)
 
 -- | Parses a compound term, which includes a functor name and a list of comma-separated arguments (which are terms). Example: `list_length2( .(1,.(2,[])) , Length)`
 compoundTerm :: Parser Term
@@ -78,8 +80,8 @@ fact = do
 goal :: Parser Goal
 goal = do
   t1 <- term
-  tail <- many (try (spaces >> char ',' >> spaces >> term))
-  return (t1:tail)
+  terms <- many (try (spaces >> char ',' >> spaces >> term))
+  return (t1:terms)
 
 -- | Parses a rule, which has a head (term) followed by `:-` followed by a body (goal) and ending with `.`.
 rule :: Parser Clause

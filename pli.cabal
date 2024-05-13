@@ -65,7 +65,8 @@ executable pli
 
     -- Other library packages from which modules are imported.
     build-depends:    base ^>=4.17.2.1,
-                      parsec ^>=3.1.17.0
+                      parsec ^>=3.1.16.0,
+                      containers ^>=0.6.7.0
 
     -- Directories containing source files.
     hs-source-dirs:   app

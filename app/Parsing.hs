@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -Wno-unused-do-bind #-}
 
-module Parsing (parseProgram, parseQuery) where
+module Parsing (Term(..), Goal, Clause(..), Program, Query, parseProgram, parseQuery, parseTerm) where
 
 import Text.Parsec
 import Text.Parsec.String
@@ -58,6 +58,9 @@ compoundTerm = do
 -- | Parses a term (a compound term, an atom or a variable).
 term :: Parser Term
 term = try compoundTerm <|> try (Atom <$> atom) <|> Var <$> var
+
+parseTerm :: String -> Either ParseError Term
+parseTerm = parse term ""
 
 
 ------------

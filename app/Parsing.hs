@@ -9,7 +9,7 @@ import Text.Parsec.String
 -- TERM --
 ----------
 
-data Term = Atom [Char] | Var [Char] | Compound [Char] [Term]
+data Term = Atom [Char] | Var [Char] | Comp [Char] [Term]
   deriving (Eq, Show)
 
 -- | Parses a string quated in `'`. The characters `\` and `'` must be escaped. Example: `'Darth Vader'`
@@ -53,7 +53,7 @@ compoundTerm = do
   argTail <- many (try (spaces >> char ',' >> spaces >> term)) -- more than one are optional
   spaces
   char ')'
-  return (Compound functor (arg1:argTail))
+  return (Comp functor (arg1:argTail))
 
 -- | Parses a term (a compound term, an atom or a variable).
 term :: Parser Term

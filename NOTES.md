@@ -1,3 +1,5 @@
+- `/**/` komentáře by mohlo jít detekovat lépe (na rozdíl od `%`)
+
 - zabudované:
   - unifikace `=` - najít algoritmus
   - negation as failure `\+` - prostě zkusit splnit cíl a negovat, jestli to bylo úspěšné

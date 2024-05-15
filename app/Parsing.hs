@@ -1,7 +1,8 @@
 {-# OPTIONS_GHC -Wno-unused-do-bind #-}
 
-module Parsing (Term(..), Goal, Clause(..), Program, Query, parseProgram, parseQuery, parseTerm) where
+module Parsing (PTerm, Goal, Clause(..), Program, Query, parseProgram, parseQuery, parseTerm, ParseError) where
 
+import Terms
 import Text.Parsec
 import Text.Parsec.String
 
@@ -9,11 +10,10 @@ import Text.Parsec.String
 -- TERM --
 ----------
 
-data Term = Atom [Char] | Var [Char] | Comp [Char] [Term]
-  deriving (Eq, Show)
+type PTerm = Term String String String
 
 -- | Parses a string quated in `'`. The characters `\` and `'` must be escaped. Example: `'Darth Vader'`
-quotedStr :: Parser [Char]
+quotedStr :: Parser String
 quotedStr = do
   char '\''
   str <- many (noneOf "\\'" <|> (char '\\' >> oneOf ['\\', '\'']))
@@ -21,30 +21,30 @@ quotedStr = do
   return str
 
 -- | Parses an atom starting with a lowercase letter and containing only alphanumeric characters and `_`. Example: `list_length2`
-basicAtom :: Parser [Char]
+basicAtom :: Parser String
 basicAtom = do
   c1 <- lower
   chars <- many (choice [alphaNum, char '_'])
   return (c1:chars)
 
 -- | Parses a special atom, eg. `=`.
-specialAtom :: Parser [Char]
+specialAtom :: Parser String
 specialAtom = choice (map (try . string) specialAtoms)
   where specialAtoms = ["=", "\\=", "\\+", "[]", ".", "0"]
 
 -- | Parses an atom.
-atom :: Parser [Char]
+atom :: Parser String
 atom = try basicAtom <|> try specialAtom <|> quotedStr
 
 -- | Parses a variable (which must start with a uppercase letter or a `_` and contain only alphanumeric characters and `_`). Example: `Length`
-var :: Parser [Char]
+var :: Parser String
 var = do
   c1 <- upper <|> char '_'
   chars <- many (choice [alphaNum, char '_'])
   return (c1:chars)
 
 -- | Parses a compound term, which includes a functor name and a list of comma-separated arguments (which are terms). Example: `list_length2( .(1,.(2,[])) , Length)`
-compoundTerm :: Parser Term
+compoundTerm :: Parser PTerm
 compoundTerm = do
   functor <- atom
   char '('
@@ -55,14 +55,14 @@ compoundTerm = do
   return (Comp functor args)
 
 -- | Parses a compund term or an atom, but not a variable.
-compoundOrAtom :: Parser Term
+compoundOrAtom :: Parser PTerm
 compoundOrAtom = try compoundTerm <|> (Atom <$> atom)
 
 -- | Parses a term (a compound term, an atom or a variable).
-term :: Parser Term
+term :: Parser PTerm
 term = try compoundOrAtom <|> (Var <$> var)
 
-parseTerm :: String -> Either ParseError Term
+parseTerm :: String -> Either ParseError PTerm
 parseTerm = parse term ""
 
 
@@ -70,9 +70,9 @@ parseTerm = parse term ""
 -- CLAUSE --
 ------------
 
-type Goal = [Term]
-data Clause = Fact Term | Rule Term Goal
-  deriving (Eq, Show)
+type Goal = [PTerm]
+data Clause = Fact PTerm | Rule PTerm Goal
+  deriving (Show)
 
 -- | Parses a fact, which is a term followed by `.`.
 fact :: Parser Clause

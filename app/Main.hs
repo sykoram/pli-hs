@@ -107,7 +107,7 @@ applyBindings bindings term = case term of
 {-|
 Unifies the two terms and updates the bindings. Returns Nothing on failure.
 
-Example: unify `p(q(a),X0,q(X1))` and `p(X2,X3,X3)` --> `X0 = X3 = q(X1), X2 = q(a)`
+Example: unify `p(q(a),X0,q(X1))` and `p(X2,X3,X3)` --> `X0 = q(X1), X3 = q(X1), X2 = q(a)`
 
 >>> let t1 = Comp "p" [Comp "q" [Atom "a"],Var 0,Comp "q" [Var 1]] ; t2 = Comp "p" [Var 2,Var 3,Var 3] in unify t1 t2 Map.empty
 Just (fromList [(0,"q"(#1)),(2,"q"("a")),(3,"q"(#1))])

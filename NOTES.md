@@ -1,9 +1,12 @@
+- TODO
+  - backtracking
+
 - `/**/` komentáře by mohlo jít detekovat lépe (na rozdíl od `%`)
 
 - zabudované:
   - unifikace `=` - najít algoritmus
   - negation as failure `\+` - prostě zkusit splnit cíl a negovat, jestli to bylo úspěšné
-  - řezy jsou možná moc složité
+  - že by řezy nebyly moc složité udělat? (zrušit zkoušení dalších možností) - pak bychom nemuseli zabudovávat `\+`
 
 - unifikace
   - "volání" predikátu => musí se přejmenovat proměnné!
@@ -19,3 +22,4 @@
     - mzero je []
     - mplus je ++
     - `do x <- [1..5]; return (x+1)` -> `[2,3,4,5,6]`
+  - asi prostě vracet seznam všech výsledků (lazy)

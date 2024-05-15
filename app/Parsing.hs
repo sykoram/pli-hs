@@ -49,15 +49,18 @@ compoundTerm = do
   functor <- atom
   char '('
   spaces
-  arg1 <- term -- one argument is obligatory
-  argTail <- many (try (spaces >> char ',' >> spaces >> term)) -- more than one are optional
+  args <- try term `sepBy` try (spaces >> char ',' >> spaces)
   spaces
   char ')'
-  return (Comp functor (arg1:argTail))
+  return (Comp functor args)
+
+-- | Parses a compund term or an atom, but not a variable.
+compoundOrAtom :: Parser Term
+compoundOrAtom = try compoundTerm <|> (Atom <$> atom)
 
 -- | Parses a term (a compound term, an atom or a variable).
 term :: Parser Term
-term = try compoundTerm <|> try (Atom <$> atom) <|> Var <$> var
+term = try compoundOrAtom <|> (Var <$> var)
 
 parseTerm :: String -> Either ParseError Term
 parseTerm = parse term ""
@@ -74,7 +77,7 @@ data Clause = Fact Term | Rule Term Goal
 -- | Parses a fact, which is a term followed by `.`.
 fact :: Parser Clause
 fact = do
-  f <- term
+  f <- compoundOrAtom
   spaces
   char '.'
   return (Fact f)
@@ -89,7 +92,7 @@ goal = do
 -- | Parses a rule, which has a head (term) followed by `:-` followed by a body (goal) and ending with `.`.
 rule :: Parser Clause
 rule = do
-  h <- term
+  h <- compoundOrAtom
   spaces
   string ":-"
   spaces

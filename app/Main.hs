@@ -112,15 +112,14 @@ Example: unify `p(q(a),X0,q(X1))` and `p(X2,X3,X3)` --> `X0 = X3 = q(X1), X2 = q
 >>> let t1 = Comp "p" [Comp "q" [Atom "a"],Var 0,Comp "q" [Var 1]] ; t2 = Comp "p" [Var 2,Var 3,Var 3] in unify t1 t2 Map.empty
 Just (fromList [(0,"q"(#1)),(2,"q"("a")),(3,"q"(#1))])
 
-Example: unify `p(X0,X0,X0)` and `p(X1,q(X2),q(q(X3)))` --> `X0 = X1 = q(q(X3)), X2 = q(X3)`
+Example: unify `p(X0,X0,X0)` and `p(X1,q(X2),q(q(X3)))` --> `X0 = q(q(X3)), X1 = q(q(X3)), X2 = q(X3)`
 
 >>> let t1 = Comp "p" [Var 0,Var 0,Var 0] ; t2 = Comp "p" [Var 1,Comp "q" [Var 2],Comp "q" [Comp "q" [Var 3]]] in unify t1 t2 Map.empty
 Just (fromList [(0,"q"("q"(#3))),(1,"q"("q"(#3))),(2,"q"(#3))])
 -}
 unify :: Term -> Term -> Bindings -> Maybe Bindings
-unify term1 term2 bindings = case (applyBindings bindings term1, applyBindings bindings term2) of
+unify term1 term2 bindings = case (applyBindings bindings term1, applyBindings bindings term2) of -- apply bindings before unifying => binded variables shouldn't occur in the terms afterwards
   (Atom a, Atom b) | a == b    -> Just bindings
-                   | otherwise -> Nothing
   (Var u,  Var v)  | u == v    -> Just bindings
                    | u < v     -> Just (bind u (Var v) bindings) -- order the variables (maybe not necessary)
                    | otherwise -> Just (bind v (Var u) bindings)
@@ -130,7 +129,7 @@ unify term1 term2 bindings = case (applyBindings bindings term1, applyBindings b
     where
       sameComp = f1 == f2 && length args1 == length args2 -- the same functor and arity
       unifyArgsStep maybeBindings (a1, a2) = maybeBindings >>= unify a1 a2 -- calls unify if maybeBindings has a value (is Just)
-  (_, _) -> Nothing -- cannot unify Atom and Comp
+  (_, _) -> Nothing -- cannot unify different Atoms, an Atom with a Comp or Comps with a different functor or arity
 
 
 main :: IO ()

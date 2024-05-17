@@ -1,7 +1,7 @@
 module Main where
 
 import Common
-import Data.List (foldl')
+import Convertors
 import qualified Data.Map as Map
 import Operations
 import qualified Parsing

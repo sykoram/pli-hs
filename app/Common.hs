@@ -1,27 +1,30 @@
-module Common (Term(..), mapWithState) where
+module Common (Term(..), VarId, ITerm, Goal, Clause(..), Signature, Program, Bindings, getSignature) where
 
-import Data.List (intercalate)
+import qualified Data.Map as Map
+import TermBase
+
+type VarId = Int
+type ITerm = Term String VarId String
+
+type Goal = [ITerm]
+data Clause = Clause ITerm Goal
+  deriving (Show)
+
+type Signature = (String, Int)
+
+-- | predicate signature (name, arity) -> list of Clauses of that predicate
+type Program = Map.Map Signature [Clause]
+
+-- | variable id -> its value
+type Bindings = Map.Map VarId ITerm
 
 {-|
-Transforms each element (like `map`), but a state is passed from one call to the next one.
+Returns the signature of a term, which is its name and its arity.
 
->>> mapWithState (\x state -> (x+state, state+1)) 0 [0..4]
-([0,2,4,6,8],5)
-
->>> take 5 $ fst $ mapWithState (\x st -> (x+st, st+1)) 0 [0..] -- works on infinite lists if the final state is ignored
-[0,2,4,6,8]
+>>> getSignature (Comp "pred" [Var 0,Atom "a"])
+("pred",2)
 -}
-mapWithState :: (a -> state -> (b, state)) -> state -> [a] -> ([b], state)
-mapWithState _ state [] = ([], state)
-mapWithState f state (x:xs) =
-  let (z, state2) = f x state
-      (zs, finalState) = mapWithState f state2 xs
-  in (z:zs, finalState)
-
-
-data Term atom var ftor = Atom atom | Var var | Comp ftor [Term atom var ftor]
-
-instance (Show atom, Show var, Show ftor) => Show (Term atom var ftor) where
-  show (Atom atom)   = show atom
-  show (Var var)     = "$" ++ show var
-  show (Comp f args) = show f ++ "(" ++ intercalate ", " (map show args) ++ ")"
+getSignature :: ITerm -> Signature
+getSignature (Atom atom)      = (atom, 0)
+getSignature (Comp ftor args) = (ftor, length args)
+getSignature (Var _)          = error "Trying to get a signature of a variable."

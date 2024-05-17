@@ -58,7 +58,7 @@ executable pli
     main-is:          Main.hs
 
     -- Modules included in this executable, other than Main.
-    other-modules:    Common Operations Parsing
+    other-modules:    Common Convertors Operations Parsing TermBase Utils
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:

@@ -2,7 +2,7 @@
 
 module Parsing (PTerm, Goal, Clause(..), Program, Query, parseProgram, parseQuery, parseTerm, ParseError) where
 
-import Common
+import TermBase
 import Text.Parsec
 import Text.Parsec.String
 

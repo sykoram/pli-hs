@@ -54,27 +54,6 @@ substitute var val term = case term of
               | otherwise    -> Var other
   (Comp ftor args)           -> Comp ftor (map (substitute var val) args)
 
-{-|
-Increases ids of all variables so the least id is now equal to nextId
-
-TODO: we will need this for the whole Clause!
-
->>> rename (Comp "p" [Var 2, Var 3, Comp "q" [Var 2]]) 10
-"p"(#10, #11, "q"(#10))
--}
-rename :: ITerm -> VarId -> ITerm
-rename term nextId = case minId term of -- minId has value => increaseIds; else return the original term
-  Nothing  -> term
-  Just m   -> increaseIds (nextId - m) term
-  where
-    minId (Var v)       = Just v
-    minId (Atom _)      = Nothing
-    minId (Comp _ args) = minimum (map minId args)
-
-    increaseIds _  (Atom a)         = Atom a
-    increaseIds by (Var vid)        = Var (vid + by)
-    increaseIds by (Comp ftor args) = Comp ftor (map (increaseIds by) args)
-
 -- | variable id -> its value
 type Bindings = Map.Map VarId ITerm
 
@@ -146,7 +125,12 @@ data Clause = Clause ITerm Goal
 type Program = Map.Map Signature [Clause]
 
 {-
-TODO
+Converts a parsed program (parsed facts and rules) into the internal representation (for each predicate, list of its clauses).
+
+Example: `man(adam). man(david). bros(X,Y):-man(X),man(Y),\=(X,Y).`
+
+>>> convertProgram [Parsing.Fact (Comp "man" [Atom "adam"]), Parsing.Fact (Comp "man" [Atom "david"]), Parsing.Rule (Comp "bros" [Var "X",Var "Y"]) [Comp "man" [Var "X"],Comp "man" [Var "Y"],Comp "\\=" [Var "X",Var "Y"]]]
+fromList [(("bros",2),[Clause "bros"($0, $1) ["man"($0),"man"($1),"\\="($0, $1)]]),(("man",1),[Clause "man"("adam") [],Clause "man"("david") []])]
 -}
 convertProgram :: Parsing.Program -> Program
 convertProgram = foldl' step Map.empty
@@ -155,9 +139,28 @@ convertProgram = foldl' step Map.empty
     step prg (Parsing.Rule rHead rBody) =
       let (head2, state) = convert rHead (Map.empty,0)
           (body2, _)     = mapWithState convert state rBody
-      in Map.insertWith (++) (getSignature head2) [Clause head2 body2] prg
--- #TODO: test it!
--- do file <- readFile "examples/lib.pl"; return (convertProgram <$> Parsing.parseProgram file)
+      in Map.insertWith (flip (++)) (getSignature head2) [Clause head2 body2] prg
+
+
+{-|
+Increases ids of all variables so the least id is now equal to nextId.
+
+>>> renameVars (Clause (Comp "bros" [Var 0,Var 1]) [Comp "man" [Var 0], Comp "man" [Var 1], Comp "\\=" [Var 0,Var 1]]) 10
+Clause "bros"($10, $11) ["man"($10),"man"($11),"\\="($10, $11)]
+-}
+renameVars :: Clause -> VarId -> Clause
+renameVars clause@(Clause cHead cBody) nextId = case collectIds cHead ++ concatMap collectIds cBody of
+  []  -> clause -- no id => return the original clause
+  ids -> let inc = increaseIds (nextId - minimum ids) -- else increase ids
+         in Clause (inc cHead) (map inc cBody)
+  where
+    collectIds (Var  v)      = [v]
+    collectIds (Atom _)      = []
+    collectIds (Comp _ args) = concatMap collectIds args
+
+    increaseIds _  (Atom a)         = Atom a
+    increaseIds by (Var  v)         = Var (v + by)
+    increaseIds by (Comp ftor args) = Comp ftor (map (increaseIds by) args)
 
 
 parseTerm :: String -> (Map.Map String VarId, VarId) -> Either Parsing.ParseError (ITerm, (Map.Map String VarId, VarId))

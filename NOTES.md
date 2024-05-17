@@ -1,5 +1,4 @@
 - TODO
-  - convert Parsing.Program to internal representation that will be used in backtracking
   - backtracking
 
 - `/**/` komentáře by mohlo jít detekovat lépe (na rozdíl od `%`)
@@ -10,8 +9,5 @@
 - backtracking
   - "volání" predikátu => musí se přejmenovat (přečíslovat) jeho proměnné, až pak unifikovat s hlavou!
   - list je monáda (0/1/více výsledků)!
-    - `>>=` aplikuje funkci na každý element
-    - mzero je []
-    - mplus je ++
-    - `do x <- [1..5]; return (x+1)` -> `[2,3,4,5,6]`
+    - `>>=` aplikuje funkci na každý element a concat výsledků: `[1..5] >>= enumFromTo 2` -> `[2,2,3,2,3,4,2,3,4,5]`
   - asi prostě vracet seznam všech výsledků (lazy)

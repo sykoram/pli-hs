@@ -7,6 +7,7 @@ import qualified Data.Map as Map
 import Operations
 import qualified Parsing
 import Utils
+import Data.List (find)
 
 -- #TODO: refactor; move somewhere else
 
@@ -19,15 +20,35 @@ data State = State Bindings VarId
 
 testProgram :: Program
 testProgram = convertProgram $ unRight $ Parsing.parseProgram "\
-\true :- =(a,a).\
-\false :- =(a,b).\
+\p(a).\
+\p(b).\
+\p(c).\
 
-\len([], 0).\
-\len(.(_,Xs), s(L)) :- len(Xs,L).\
+\cut(X,Y) :- p(X),!,p(Y).\
+\cut(no,no).\
+
+\cut(X,Y,Z) :- p(X),p(Y),!,p(Z).\
+\cut(no,no,no).\
+
+\cut2(X,Y,Z) :- p(X),!,p(Y),p(Z).\
+\cut2(no,no,no).\
+
+\repeat.\
+\repeat :- repeat.\
+
+\q(a).\
+\q(b) :- !.\
+\q(c).\
+
+\cut_fail(no) :- !, =(a,b).\
+\cut_fail(also_no).\
+
+\fail_cut(a) :- =(a,b), !.\
+\fail_cut(b).\
 \"
 
 testQuery :: Query; testQueryVars :: Map.Map String VarId; testNextId :: VarId
-(testQuery, (testQueryVars, testNextId)) = convertQuery $ unRight $ Parsing.parseQuery "len(.(a,[]),Length)."
+(testQuery, (testQueryVars, testNextId)) = convertQuery $ unRight $ Parsing.parseQuery "cut(X,Y,Z)."
 
 testState :: State
 testState = State Map.empty testNextId
@@ -90,19 +111,30 @@ satisfySubgoal (Comp "=" [x, y]) (State bindings nextId) _ = maybeToList $ do
 -- other subgoals:
 satisfySubgoal term state program =
   let
-    matches = matchingClauses term state program
-  in do -- to support cuts, we'll need to filter the results (stop them after a signal)
-    (Clause _ body, state1) <- matches -- for each match...
-    satisfyGoal body state1 program    -- ...satisfy its body
+    matches = matchingClauses term state program -- get matching clauses (subgoal unified with the head)
+    satisfactions = map (\(Clause _ body, state1) -> satisfyGoal body state1 program) matches -- satisfy the matches by satisfying their bodies
+    satisfactionsUntilCut = takeWhilePlus1 snd satisfactions -- if there was a cut, throw away the subsequent alternatives
+  in concatMap fst satisfactionsUntilCut
 
-satisfyGoal :: Goal -> State -> Program -> [State]
-satisfyGoal [] state _ = [state] -- empty goal - nothing more to satisfy
-satisfyGoal (g:gs) state program =
+satisfyGoal :: Goal -> State -> Program -> ([State],Bool)
+-- empty goal => nothing more to satisfy
+satisfyGoal []            state _       = ([state], True)
+-- cut => keep on satisfying, but return information to stop trying other alternatives
+satisfyGoal (Atom "!":gs) state program = (fst $ satisfyGoal gs state program, False)
+-- #TODO: (Var v:gs)
+-- other subgoal => satisfy it and continue recursively
+satisfyGoal (g       :gs) state program =
   let
-    subgoalSatisfactions = satisfySubgoal g state program
-  in do -- to support cuts, we'll need to filter the results (stop them after a signal)
-    state1 <- subgoalSatisfactions
-    satisfyGoal gs state1 program
+    subgoalSatisfactions = satisfySubgoal g state program -- satisfy the subgoal
+    satisfactions = map (\state1 -> satisfyGoal gs state1 program) subgoalSatisfactions -- for each satisfaction independently, satisfy the following subgoals
+    satisfactionsUntilCut = takeWhilePlus1 snd satisfactions -- take all results until we get information that we went over a cut
+    allowOtherAlternatives = maybe True snd (find (\(sat,allow) -> not allow || not (null sat)) satisfactionsUntilCut)
+                             -- can we allow other alternatives? - do it according to either the first False value (then its definitely NO because there was a cut)
+                             --                                                       or the first *non-empty* satisfaction (it must have gone over a cut if there was one)
+                             -- I hope this is correct; it should even work with some "infinite" predicates like `repeat`
+  in case satisfactionsUntilCut of
+    [] -> ([], True) -- failed to satisfy this subgoal
+    _  -> (concatMap fst satisfactionsUntilCut, allowOtherAlternatives)
 
 
 convertBindingsBack :: Map.Map String VarId -> Bindings -> Map.Map String Parsing.PTerm
@@ -120,7 +152,7 @@ parseAndSolveQuery :: String -> Program -> Either Parsing.ParseError [Map.Map St
 parseAndSolveQuery queryStr program =
   do
     (query, (varIds, nextId)) <- convertQuery <$> Parsing.parseQuery queryStr
-    let resultStates = satisfyGoal query (State Map.empty nextId) program
+    let (resultStates, _) = satisfyGoal query (State Map.empty nextId) program
     let bindings = map (\(State b _) -> convertBindingsBack varIds b) resultStates
     return bindings
 

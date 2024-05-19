@@ -1,4 +1,4 @@
-module Utils(mapWithState, flipMap) where
+module Utils(mapWithState, flipMap, takeWhilePlus1) where
 import qualified Data.Map as Map
 import Data.Tuple
 
@@ -21,3 +21,15 @@ mapWithState f state (x:xs) =
 -- | Values are now keys and vice versa.
 flipMap :: Ord v => Map.Map k v -> Map.Map v k
 flipMap m = Map.fromList $ map swap (Map.toList m)
+
+{-|
+Similar to `takeWhile`, but the first element, on which the predicate failed, is also included.
+
+>>> takeWhilePlus1 (== 1) [1,1,1,1,0,0,0,0]
+[1,1,1,1,0]
+-}
+takeWhilePlus1 :: (a -> Bool) -> [a] -> [a]
+takeWhilePlus1 _ [] = []
+takeWhilePlus1 p (x:xs)
+  | p x       = x : takeWhilePlus1 p xs
+  | otherwise = [x]

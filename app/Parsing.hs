@@ -30,7 +30,7 @@ basicAtom = do
 -- | Parses a special atom, eg. `=`.
 specialAtom :: Parser String
 specialAtom = choice (map (try . string) specialAtoms)
-  where specialAtoms = ["=", "\\=", "\\+", "[]", ".", "0"]
+  where specialAtoms = ["=", "\\=", "\\+", "[]", ".", "0", "!"]
 
 -- | Parses an atom.
 atom :: Parser String

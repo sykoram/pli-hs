@@ -45,6 +45,13 @@ testProgram = convertProgram $ unRight $ Parsing.parseProgram "\
 
 \fail_cut(a) :- =(a,b), !.\
 \fail_cut(b).\
+
+\false :- =(a,b).\
+
+\\\+(Goal) :- Goal, !, false.\
+\\\+(Goal).\
+
+\\\=(X,Y) :- \\+(=(X,Y)).\
 \"
 
 testQuery :: Query; testQueryVars :: Map.Map String VarId; testNextId :: VarId
@@ -84,30 +91,21 @@ matchingClauses term (State bindings nextId) program =
       return (clause, State bindings1 nextId1)
 -- #TODO: empty is not good
 
+{-|
+Returns satisfactions of the given subgoal (a term).
 
-{-
-#TODO
-SATISFY PREDICATE:
-1. najdeme si klauzule, na které matchujeme
-2. pro jednu konkrétní:
-   - zkoušíme postupně splnit podcíle
-   - když se nějaký nepodaří, tak zkoušíme splnit předchozí jinak
-   - když už nelze jinak splnit úplně první podcíl, tak zkusíme jinou klauzuli (goto 2)
+Example: subgoal `p(X0)`, program `p(a). p(b).`
 
-CUTS:
-- we went over a cut and failed (totally) on the very next subgoal
-  => no backtracking into subgoals before the cut
-  => no trying of different clauses
-- multiple cuts is probably allowed!
-- cut => some different handling (for each subgoal and also clause, return also information whether we can backtrack?)
+>>> satisfySubgoal (Comp "p" [Var 0]) (State Map.empty 1) (Map.fromList [(("p",1),[Clause (Comp "p" [Atom "a"]) [],Clause (Comp "p" [Atom "b"]) []])])
+[State (fromList [(0,"a")]) 1,State (fromList [(0,"b")]) 1]
 -}
-
-
 satisfySubgoal :: ITerm -> State -> Program -> [State]
 -- unification (=) is built-in:
 satisfySubgoal (Comp "=" [x, y]) (State bindings nextId) _ = maybeToList $ do
   bindings1 <- unify x y bindings
   return (State bindings1 nextId)
+-- variable => replace it with its binded value (will loop indefinitely if not binded!)
+satisfySubgoal (Var v) state@(State bindings _) program = satisfySubgoal (Map.findWithDefault (Var v) v bindings) state program
 -- other subgoals:
 satisfySubgoal term state program =
   let
@@ -116,12 +114,20 @@ satisfySubgoal term state program =
     satisfactionsUntilCut = takeWhilePlus1 snd satisfactions -- if there was a cut, throw away the subsequent alternatives
   in concatMap fst satisfactionsUntilCut
 
+{-|
+Returns satisfactions of the given goal (a list of terms).
+(Also returns whether trying other alternatives is allowed - this is False when there was a cut at some point.)
+
+Example: goal `p(X0),p(X1)`, program `p(a). p(b).`
+
+>>> satisfyGoal [Comp "p" [Var 0],Comp "p" [Var 1]] (State Map.empty 2) (Map.fromList [(("p",1),[Clause (Comp "p" [Atom "a"]) [],Clause (Comp "p" [Atom "b"]) []])])
+([State (fromList [(0,"a"),(1,"a")]) 2,State (fromList [(0,"a"),(1,"b")]) 2,State (fromList [(0,"b"),(1,"a")]) 2,State (fromList [(0,"b"),(1,"b")]) 2],True)
+-}
 satisfyGoal :: Goal -> State -> Program -> ([State],Bool)
 -- empty goal => nothing more to satisfy
 satisfyGoal []            state _       = ([state], True)
 -- cut => keep on satisfying, but return information to stop trying other alternatives
 satisfyGoal (Atom "!":gs) state program = (fst $ satisfyGoal gs state program, False)
--- #TODO: (Var v:gs)
 -- other subgoal => satisfy it and continue recursively
 satisfyGoal (g       :gs) state program =
   let
@@ -136,7 +142,7 @@ satisfyGoal (g       :gs) state program =
     [] -> ([], True) -- failed to satisfy this subgoal
     _  -> (concatMap fst satisfactionsUntilCut, allowOtherAlternatives)
 
-
+-- | Gives variables their names back (in both keys and inside values).
 convertBindingsBack :: Map.Map String VarId -> Bindings -> Map.Map String Parsing.PTerm
 convertBindingsBack varIds bindings = Map.mapKeys toVarName $ Map.map toPTerm $ Map.intersection bindings varNames
   where
@@ -146,7 +152,6 @@ convertBindingsBack varIds bindings = Map.mapKeys toVarName $ Map.map toPTerm $ 
     toPTerm (Atom a)         = Atom a
     toPTerm (Var v)          = Var (toVarName v)
     toPTerm (Comp ftor args) = Comp ftor (map toPTerm args)
-
 
 parseAndSolveQuery :: String -> Program -> Either Parsing.ParseError [Map.Map String Parsing.PTerm]
 parseAndSolveQuery queryStr program =

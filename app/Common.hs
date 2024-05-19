@@ -1,4 +1,4 @@
-module Common (Term(..), VarId, ITerm, Goal, Clause(..), Signature, Program, Bindings, getSignature) where
+module Common (Term(..), VarId, ITerm, Goal, Clause(..), Signature, Program, Query, Bindings, getSignature) where
 
 import qualified Data.Map as Map
 import TermBase
@@ -14,6 +14,8 @@ type Signature = (String, Int)
 
 -- | predicate signature (name, arity) -> list of Clauses of that predicate
 type Program = Map.Map Signature [Clause]
+
+type Query = Goal
 
 -- | variable id -> its value
 type Bindings = Map.Map VarId ITerm

@@ -1,4 +1,4 @@
-module Convertors(convertTerm, convertProgram, convertGoal) where
+module Convertors(convertTerm, convertProgram, convertQuery) where
 
 import Common
 import Data.List (foldl')
@@ -44,5 +44,5 @@ Converts the goal into the internal representation. Also returns the mapping fro
 >>> convertGoal [Comp "man" [Var "X"],Comp "man" [Var "Y"],Comp "\\=" [Var "X",Var "Y"]]
 (["man"($0),"man"($1),"\\="($0, $1)],(fromList [("X",0),("Y",1)],2))
 -}
-convertGoal :: Parsing.Goal -> (Goal, (Map.Map String VarId, VarId))
-convertGoal = mapWithState convertTerm (Map.empty,0)
+convertQuery :: Parsing.Query -> (Query, (Map.Map String VarId, VarId))
+convertQuery = mapWithState convertTerm (Map.empty,0)

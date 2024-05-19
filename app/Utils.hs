@@ -1,4 +1,6 @@
-module Utils(mapWithState) where
+module Utils(mapWithState, flipMap) where
+import qualified Data.Map as Map
+import Data.Tuple
 
 {-|
 Transforms each element (like `map`), but a state is passed from one call to the next one.
@@ -15,3 +17,7 @@ mapWithState f state (x:xs) =
   let (z, state2) = f x state
       (zs, finalState) = mapWithState f state2 xs
   in (z:zs, finalState)
+
+-- | Values are now keys and vice versa.
+flipMap :: Ord v => Map.Map k v -> Map.Map v k
+flipMap m = Map.fromList $ map swap (Map.toList m)

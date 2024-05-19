@@ -70,14 +70,15 @@ unify term1 term2 bindings = case (applyBindings bindings term1, applyBindings b
 {-|
 Increases ids of all variables so the least id is now equal to nextId.
 
->>> renameVars (Clause (Comp "bros" [Var 0,Var 1]) [Comp "man" [Var 0], Comp "man" [Var 1], Comp "\\=" [Var 0,Var 1]]) 10
-Clause "bros"($10, $11) ["man"($10),"man"($11),"\\="($10, $11)]
+>>> renameVars (Clause (Comp "bros" [Var 2,Var 3]) [Comp "man" [Var 2], Comp "man" [Var 3], Comp "\\=" [Var 2,Var 3]]) 10
+(Clause "bros"($10, $11) ["man"($10),"man"($11),"\\="($10, $11)],12)
 -}
-renameVars :: Clause -> VarId -> Clause
+renameVars :: Clause -> VarId -> (Clause, VarId)
 renameVars clause@(Clause cHead cBody) nextId = case collectIds cHead ++ concatMap collectIds cBody of
-  []  -> clause -- no id => return the original clause
-  ids -> let inc = increaseIds (nextId - minimum ids) -- else increase ids
-         in Clause (inc cHead) (map inc cBody)
+  []  -> (clause, nextId) -- no id => return the original clause
+  ids -> let by = nextId - minimum ids -- else increase ids
+             inc = increaseIds by
+         in (Clause (inc cHead) (map inc cBody), maximum ids + by + 1)
   where
     collectIds (Var  v)      = [v]
     collectIds (Atom _)      = []

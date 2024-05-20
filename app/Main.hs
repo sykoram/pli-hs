@@ -6,53 +6,9 @@ import qualified Data.Map as Map
 import qualified Parsing
 import Utils
 import Satisfaction
-
-unRight :: Either a b -> b
-unRight (Right x) = x
-unRight (Left  _) = error "Expected Right, got Left"
-
-testProgram :: Program
-testProgram = convertProgram $ unRight $ Parsing.parseProgram "\
-\p(a).\
-\p(b).\
-\p(c).\
-
-\cut(X,Y) :- p(X),!,p(Y).\
-\cut(no,no).\
-
-\cut(X,Y,Z) :- p(X),p(Y),!,p(Z).\
-\cut(no,no,no).\
-
-\cut2(X,Y,Z) :- p(X),!,p(Y),p(Z).\
-\cut2(no,no,no).\
-
-\repeat.\
-\repeat :- repeat.\
-
-\q(a).\
-\q(b) :- !.\
-\q(c).\
-
-\cut_fail(no) :- !, =(a,b).\
-\cut_fail(also_no).\
-
-\fail_cut(a) :- =(a,b), !.\
-\fail_cut(b).\
-
-\false :- =(a,b).\
-
-\\\+(Goal) :- Goal, !, false.\
-\\\+(Goal).\
-
-\\\=(X,Y) :- \\+(=(X,Y)).\
-\"
-
-testQuery :: Query; testQueryVars :: Map.Map String VarId; testNextId :: VarId
-(testQuery, (testQueryVars, testNextId)) = convertQuery $ unRight $ Parsing.parseQuery "cut(X,Y,Z)."
-
-testState :: State
-testState = State Map.empty testNextId
-
+import System.Environment (getArgs)
+import System.IO (hFlush, stdout)
+import Data.List (intercalate)
 
 -- | Gives variables their names back (in both keys and inside values).
 convertBindingsBack :: Map.Map String VarId -> Bindings -> Map.Map String Parsing.PTerm
@@ -65,6 +21,7 @@ convertBindingsBack varIds bindings = Map.mapKeys toVarName $ Map.map toPTerm $ 
     toPTerm (Var v)          = Var (toVarName v)
     toPTerm (Comp ftor args) = Comp ftor (map toPTerm args)
 
+-- | Parses the given string as a query, and obtains its satisfactions/results.
 parseAndSolveQuery :: String -> Program -> Either Parsing.ParseError [Map.Map String Parsing.PTerm]
 parseAndSolveQuery queryStr program =
   do
@@ -73,6 +30,53 @@ parseAndSolveQuery queryStr program =
     let bindings = map (\(State b _) -> convertBindingsBack varIds b) resultStates
     return bindings
 
+promptLine :: String -> IO String
+promptLine msg = do
+  putStr msg
+  hFlush stdout
+  getLine
+
+showBindings :: Map.Map String Parsing.PTerm -> String
+showBindings bindings
+  | Map.null bindings = "True"
+  | otherwise         = intercalate "\n" $ map (\(var,term) -> var ++ " = " ++ show term) (Map.toAscList bindings)
+
+-- | Prints the (first) result and waits for the user to say whether to print the next one ([Enter] or ";"+[Enter] to print the next one; "."+[Enter] to stop).
+printQueryResults :: [Map.Map String Parsing.PTerm] -> IO ()
+printQueryResults []     = putStrLn "False."
+printQueryResults (result:results) = do
+  putStr $ showBindings result
+  next <- toDisplayNext
+  if next
+    then putStrLn ";" >> printQueryResults results
+    else putStrLn "."
+  
+  where
+    toDisplayNext :: IO Bool
+    toDisplayNext = do
+      s <- promptLine " "
+      case s of
+        ""  -> return True
+        ";" -> return True
+        "." -> return False
+        _   -> toDisplayNext
+
+-- | Runs the read-eval-print loop indefinitely.
+repl :: Program -> IO ()
+repl program = do
+  queryString <- promptLine "\n?- "
+  case parseAndSolveQuery queryString program of
+    Left  err     -> print err
+    Right results -> printQueryResults results
+  repl program
 
 main :: IO ()
-main = putStrLn "Hello, Haskell!"
+main = do
+  args <- getArgs
+  if length args /= 1
+  then putStrLn "Provide exactly one path to a Prolog program file."
+  else do
+    programString <- readFile $ head args
+    case convertProgram <$> Parsing.parseProgram programString of
+      Left  err     -> print err
+      Right program -> repl program

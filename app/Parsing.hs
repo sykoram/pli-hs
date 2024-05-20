@@ -123,7 +123,7 @@ parseProgram = parse program ""
 
 -- | Parses a query, which is a goal ending with `.`.
 query :: Parser Query
-query = spaces >> goal <* spaces <* char '.' <* eof
+query = spaces >> goal <* spaces <* char '.' <* spaces <* eof
 
 -- | Parses a query, which is a goal ending with `.`.
 parseQuery :: String -> Either ParseError Query

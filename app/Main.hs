@@ -9,13 +9,14 @@ import Satisfaction
 import System.Environment (getArgs)
 import System.IO (hFlush, stdout)
 import Data.List (intercalate)
+import Data.Maybe
 
 -- | Gives variables their names back (in both keys and inside values).
 convertBindingsBack :: Map.Map String VarId -> Bindings -> Map.Map String Parsing.PTerm
 convertBindingsBack varIds bindings = Map.mapKeys toVarName $ Map.map toPTerm $ Map.intersection bindings varNames
   where
     varNames = flipMap varIds
-    toVarName = (Map.!) varNames
+    toVarName x = fromMaybe ("__"++show x) $ Map.lookup x varNames
 
     toPTerm (Atom a)         = Atom a
     toPTerm (Var v)          = Var (toVarName v)
@@ -43,14 +44,15 @@ showBindings bindings
 
 -- | Prints the (first) result and waits for the user to say whether to print the next one ([Enter] or ";"+[Enter] to print the next one; "."+[Enter] to stop).
 printQueryResults :: [Map.Map String Parsing.PTerm] -> IO ()
-printQueryResults []     = putStrLn "False."
+printQueryResults []               = putStrLn "False."
+printQueryResults [result]         = putStr (showBindings result) >> putStrLn "."
 printQueryResults (result:results) = do
   putStr $ showBindings result
   next <- toDisplayNext
   if next
     then putStrLn ";" >> printQueryResults results
     else putStrLn "."
-  
+
   where
     toDisplayNext :: IO Bool
     toDisplayNext = do

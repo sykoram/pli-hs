@@ -1,4 +1,4 @@
-module Common (Term(..), VarId, ITerm, Goal, Clause(..), Signature, Program, Query, Bindings, getSignature) where
+module Common (Term(..), VarId, ITerm, Goal, Clause(..), Signature, Program, Query, Bindings, State(..), getSignature) where
 
 import qualified Data.Map as Map
 import TermBase
@@ -19,6 +19,10 @@ type Query = Goal
 
 -- | variable id -> its value
 type Bindings = Map.Map VarId ITerm
+
+-- | bindings and next free variable id (used while renaming)
+data State = State Bindings VarId
+  deriving (Show)
 
 {-|
 Returns the signature of a term, which is its name and its arity.

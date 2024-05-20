@@ -1,3 +1,6 @@
+\+(Goal) :- Goal, !, false.
+\+(Goal).
+
 \=(X, Y) :- \+( =(X, Y) ).
 
 reverse(Xs, Res) :- reverse(Xs, [], Res).

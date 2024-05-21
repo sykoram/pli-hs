@@ -81,4 +81,4 @@ main = do
     programString <- readFile $ head args
     case convertProgram <$> Parsing.parseProgram programString of
       Left  err     -> print err
-      Right program -> repl program
+      Right program -> putStrLn "Program loaded.\nDuring query evaluation, press [Enter] or ';'+[Enter] for the next result or '.'+[Enter] to stop." >> repl program

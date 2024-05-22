@@ -5,6 +5,7 @@
 - Cuts `!` are supported.
 - Lists are written as `.(a, .(b, .(c, [])))` (element `a`, `b` and `c`).
 - Natural numbers are written as `s(s(0))` (this is 2).
+- Unknown predicates are treated as false (beware of typos!). 
 
 To run the program:
 ```
